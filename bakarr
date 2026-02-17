@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sierra Leone National ID System</title>
+<style>
+body{
+    margin:0;
+    font-family:Segoe UI, Arial, sans-serif;
+    background:linear-gradient(135deg,#0bb35a,#ffffff,#0057b7);
+}
+input,select{
+    width:95%;
+    padding:10px;
+    margin:5px 0;
+    border-radius:6px;
+    border:1px solid #ccc;
+}
+button{
+    padding:10px 16px;
+    border:none;
+    border-radius:8px;
+    font-weight:bold;
+    cursor:pointer;
+    transition:.2s;
+}
+button:hover{transform:scale(1.05)}
+.blue{background:#0057b7;color:white;}
+.green{background:#0bb35a;color:white;}
+.orangeBtn{background:#ff7900;color:white;}
+.red{background:#b30000;color:white;}
+#login{text-align:center;padding-top:40px;}
+.loginBox{
+    width:400px;
+    max-width:95%;
+    margin:auto;
+    background:white;
+    padding:25px;
+    border-radius:12px;
+    box-shadow:0 0 15px #0003;
+}
+.panel{display:none;padding:20px;}
+.section{
+    background:white;
+    padding:15px;
+    border-radius:10px;
+    margin:10px 0;
+    box-shadow:0 0 8px #ccc;
+}
+.card{
+    width:420px;
+    max-width:95%;
+    height:220px;
+    display:flex;
+    border-radius:12px;
+    border:2px solid #0057b7;
+    box-shadow:0 4px 12px #0005;
+    margin-top:15px;
+}
+.left{
+    width:35%;
+    background:#eee;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+.left img{width:110px;border:2px solid black;}
+.right{padding:10px;width:65%;font-size:13px;}
+.flag{
+    height:10px;
+    background:linear-gradient(to right,green 33%,white 33% 66%,blue 66%);
+    margin-bottom:6px;
+}
+table{width:100%;border-collapse:collapse;}
+th,td{border:1px solid #ddd;padding:5px;font-size:12px;text-align:center;}
+video,canvas{border-radius:6px;border:1px solid #000;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+<div class="loginBox">
+<h3>Sierra Leone National ID System</h3>
+
+<div class="section">
+<h4>Login</h4>
+<input id="user" placeholder="Username">
+<input id="pass" type="password" placeholder="Password">
+<button onclick="loginUser()" class="blue">Login</button>
+</div>
+
+<div class="section">
+<h4>Citizen Sign Up</h4>
+<input id="cName" placeholder="Full Name">
+<input id="cAddr" placeholder="Address">
+<select id="cGender"><option>Male</option><option>Female</option></select>
+<input id="cUsername" placeholder="Username">
+<input id="cPassword" type="password" placeholder="Password">
+<button onclick="registerCitizen()" class="green">Sign Up</button>
+<p style="font-size:12px">Photo & signature can be added later in dashboard.</p>
+</div>
+</div>
+</div>
+
+<!-- CITIZEN DASHBOARD -->
+<div id="citizenPanel" class="panel">
+<h2>Citizen Dashboard</h2>
+<button onclick="logout()" class="red">Logout</button>
+<div id="citizenInfo"></div>
+
+<div class="section">
+<h4>Add Photo & Signature (Optional)</h4>
+<video id="cVideo" width="260" autoplay style="display:none;"></video><br>
+<button onclick="startCamera()" class="green">Start Camera</button>
+<button onclick="cSnap()" class="blue">📸 Capture Photo</button><br>
+<img id="cPhoto" width="110"><br>
+<canvas id="cSign" width="260" height="80"></canvas><br>
+<button onclick="clearSign()" class="red">Clear Signature</button>
+<button onclick="savePhotoSign()" class="blue">Save Photo & Signature</button>
+</div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="adminPanel" class="panel">
+<h2>Admin Dashboard</h2>
+<button onclick="logout()" class="red">Logout</button>
+<div class="section">
+<h3>All Citizens</h3>
+<table id="adminTable">
+<tr>
+<th>NIN</th><th>Name</th><th>Username</th><th>Gender</th><th>Photo</th><th>Signature</th><th>Actions</th>
+</tr>
+</table>
+</div>
+</div>
+
+<!-- ID CARD -->
+<div id="cardArea"></div>
+
+<script>
+// Accounts
+const users={Admin:"123456"};
+
+// Local Storage
+function getData(){return JSON.parse(localStorage.getItem("citizens")||"[]")}
+function setData(d){localStorage.setItem("citizens",JSON.stringify(d))}
+
+// Register Citizen
+function registerCitizen(){
+let username=cUsername.value;
+let password=cPassword.value;
+let name=cName.value;
+let addr=cAddr.value;
+let gender=cGender.value;
+
+if(!username||!password||!name||!addr) return alert("Fill all fields");
+
+let list=getData();
+if(list.find(x=>x.username===username)) return alert("Username taken");
+
+let citizen={nin:"SL"+Date.now(),name,address:addr,gender,username,password,photo:"",signature:""};
+list.push(citizen);
+setData(list);
+alert("Registered! Your NIN: "+citizen.nin);
+showCitizenPanel(citizen);
+}
+
+// Login
+function loginUser(){
+let u=user.value;
+let p=pass.value;
+
+// Admin login
+if(users[u]===p){
+    login.style.display="none";
+    adminPanel.style.display="block";
+    loadAdminTable();
+    return;
+}
+
+// Citizen login
+let list=getData();
+let c=list.find(x=>x.username===u && x.password===p);
+if(c){
+    login.style.display="none";
+    showCitizenPanel(c);
+}else alert("Invalid login");
+}
+
+// Show Citizen Dashboard
+function showCitizenPanel(c){
+citizenPanel.style.display="block";
+citizenInfo.innerHTML=`<b>${c.name}</b><br>NIN: ${c.nin}<br>Gender: ${c.gender}<br>Address: ${c.address}`;
+showCard(c);
+}
+
+// Admin Table
+function loadAdminTable(){
+let list=getData();
+let table=document.getElementById("adminTable");
+table.innerHTML=`<tr>
+<th>NIN</th><th>Name</th><th>Username</th><th>Gender</th><th>Photo</th><th>Signature</th><th>Actions</th>
+</tr>`;
+list.forEach((c,i)=>{
+table.innerHTML+=`<tr>
+<td>${c.nin}</td>
+<td>${c.name}</td>
+<td>${c.username}</td>
+<td>${c.gender}</td>
+<td><img src="${c.photo?c.photo:'https://via.placeholder.com/60'}" width="60"></td>
+<td>${c.signature?'<img src="'+c.signature+'" width="80">':'Not signed'}</td>
+<td><button onclick="viewCard('${c.nin}')" class="blue">View</button>
+<button onclick="deleteCitizen(${i})" class="red">Delete</button></td>
+</tr>`;
+});
+}
+
+// View ID Card
+function viewCard(nin){
+let list=getData();
+let c=list.find(x=>x.nin===nin);
+if(c) showCard(c);
+}
+
+// Delete Citizen
+function deleteCitizen(i){
+if(!confirm("Delete this citizen?")) return;
+let list=getData();
+list.splice(i,1);
+setData(list);
+loadAdminTable();
+}
+
+// Logout
+function logout(){location.reload();}
+
+// Camera & Signature
+let cameraStarted=false;
+function startCamera(){
+if(cameraStarted) return;
+navigator.mediaDevices.getUserMedia({video:true})
+.then(s=>{cVideo.srcObject=s;cVideo.style.display="block";cameraStarted=true})
+.catch(e=>alert("Camera not available"));
+}
+function cSnap(){
+if(!cameraStarted) return alert("Start camera first");
+let canvas=document.createElement("canvas");
+canvas.width=260; canvas.height=200;
+canvas.getContext("2d").drawImage(cVideo,0,0,260,200);
+cPhoto.src=canvas.toDataURL();
+}
+
+// Signature
+let ctx=cSign.getContext("2d"); let drawing=false;
+cSign.onmousedown=()=>drawing=true;
+cSign.onmouseup=()=>drawing=false;
+cSign.onmousemove=e=>{if(drawing){ctx.lineTo(e.offsetX,e.offsetY);ctx.stroke()}}
+function clearSign(){ctx.clearRect(0,0,260,80)}
+function savePhotoSign(){
+let list=getData();
+let c=list.find(x=>x.username===user.value);
+if(!c) c=list[list.length-1];
+if(cPhoto.src) c.photo=cPhoto.src;
+c.signature=cSign.toDataURL();
+setData(list);
+showCitizenPanel(c);
+alert("Photo & Signature saved!");
+}
+
+// Show NIN Card
+function showCard(c){
+cardArea.innerHTML=`<div class="card">
+<div class="left"><img src="${c.photo?c.photo:'https://via.placeholder.com/100'}"></div>
+<div class="right">
+<div class="flag"></div>
+<b>Sierra Leone National ID</b><br>
+Name: ${c.name}<br>
+NIN: ${c.nin}<br>
+Gender: ${c.gender}<br>
+Address: ${c.address}<br>
+Username: ${c.username}
+</div></div>`;
+}
+</script>
+</body>
+</html>
