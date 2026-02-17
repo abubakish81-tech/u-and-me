@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<!-- saved from url=(0081)file:///C:/Users/dell/Downloads/php-8.5.2-src%20(1)/tests/strings/Untitled-2.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Sierra Leone National ID System</title>
+<style>
+body{margin:0;font-family:Segoe UI;background:linear-gradient(135deg,#0bb35a,#fff,#0057b7);}
+input,select{width:95%;padding:10px;margin:5px 0;border-radius:6px;border:1px solid #ccc;}
+button{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;transition:.2s;}
+button:hover{transform:scale(1.05)}
+.blue{background:#0057b7;color:white;}
+.green{background:#0bb35a;color:white;}
+.orangeBtn{background:#ff7900;color:white;}
+.red{background:#b30000;color:white;}
+#login{text-align:center;padding-top:40px;}
+.loginBox{width:400px;margin:auto;background:white;padding:25px;border-radius:12px;box-shadow:0 0 15px #0003;}
+.panel{display:none;padding:20px;}
+.section{background:white;padding:15px;border-radius:10px;margin:10px 0;box-shadow:0 0 8px #ccc;}
+.card{width:420px;height:220px;display:flex;border-radius:12px;border:2px solid #0057b7;box-shadow:0 4px 12px #0005;margin-top:15px;}
+.left{width:35%;background:#eee;display:flex;align-items:center;justify-content:center;}
+.left img{width:110px;border:2px solid black;}
+.right{padding:10px;width:65%;font-size:13px;}
+.flag{height:10px;background:linear-gradient(to right,green 33%,white 33% 66%,blue 66%);margin-bottom:6px;}
+table{width:100%;border-collapse:collapse;}
+th,td{border:1px solid #ddd;padding:5px;font-size:12px;text-align:center;}
+video{border-radius:8px;border:1px solid #000;}
+canvas{border:1px solid black;border-radius:5px;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN / SIGNUP -->
+<div id="login">
+<div class="loginBox">
+<h3>Sierra Leone National ID System</h3>
+
+<!-- LOGIN -->
+<div class="section">
+<h4>Login</h4>
+<input id="user" placeholder="Username (Citizen / Admin / Orange / UBA)">
+<input id="pass" type="password" placeholder="Password">
+<button onclick="loginUser()" class="blue">Login</button>
+</div>
+
+<!-- SIGNUP -->
+<div class="section">
+<h4>Citizen Sign Up</h4>
+<input id="cName" placeholder="Full Name"><br>
+<input id="cAddr" placeholder="Address"><br>
+<select id="cGender"><option>Male</option><option>Female</option></select><br>
+<input id="cUsername" placeholder="Choose Username"><br>
+<input id="cPassword" type="password" placeholder="Choose Password"><br>
+<button onclick="registerCitizen()" class="green">Sign Up</button>
+<p style="font-size:12px">Photo &amp; signature can be added later in dashboard.</p>
+</div>
+</div>
+</div>
+
+<!-- CITIZEN DASHBOARD -->
+<div id="citizenPanel" class="panel">
+<h2>Citizen Dashboard</h2>
+<button onclick="logout()" class="red">Logout</button>
+<div id="citizenInfo"></div>
+<div class="section">
+<h4>Add Photo &amp; Signature (Optional)</h4>
+<video id="cVideo" width="260" autoplay="" style="display:none;"></video><br>
+<button onclick="startCamera()" class="green">Start Camera</button><br>
+<button onclick="cSnap()" class="blue">📸 Capture Photo</button><br>
+<img id="cPhoto" width="110"><br>
+<canvas id="cSign" width="260" height="80"></canvas><br>
+<button onclick="clearSign()" class="red">Clear Signature</button><br>
+<button onclick="savePhotoSign()" class="blue">Save Photo &amp; Signature</button>
+</div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="adminPanel" class="panel">
+<h2>Admin Dashboard</h2>
+<button onclick="logout()" class="red">Logout</button>
+<div class="section">
+<h3>All Citizens</h3>
+<table id="adminTable">
+<tbody><tr>
+<th>NIN</th><th>Name</th><th>Username</th><th>Gender</th><th>Photo</th><th>Signature</th><th>Actions</th>
+</tr>
+</tbody></table>
+</div>
+<div class="section">
+<h3>Search Citizen</h3>
+<input id="searchInput" placeholder="Enter NIN or Username">
+<button onclick="searchAdminCitizen()" class="green">Search</button>
+<div id="searchResultAdmin"></div>
+</div>
+</div>
+
+<!-- ORANGE -->
+<div id="orangePanel" class="panel">
+<h2>Orange Verification</h2>
+<button onclick="logout()" class="red">Logout</button>
+<input id="onNin" placeholder="Enter NIN">
+<input id="onPhone" placeholder="07xxxxxxxx">
+<button onclick="verifyOrange()" class="orangeBtn">Verify</button>
+<div id="orangeResult"></div>
+</div>
+
+<!-- UBA BANK -->
+<div id="ubaPanel" class="panel">
+<h2>UBA Banking</h2>
+<button onclick="logout()" class="red">Logout</button>
+<input id="bnin" placeholder="Enter NIN">
+<input id="deposit" type="number" placeholder="Deposit">
+<button onclick="bankSystem()" class="blue">Deposit</button>
+<div id="bankResult"></div>
+</div>
+
+<!-- ID CARD DISPLAY -->
+<div id="cardArea"></div>
+
+<script>
+// ACCOUNTS
+const users={Admin:"123456",Orange:"2010",UBA:"1234"};
+
+// LOCAL STORAGE
+function getData(){return JSON.parse(localStorage.getItem("citizens")||"[]")}
+function setData(d){localStorage.setItem("citizens",JSON.stringify(d))}
+
+// REGISTER CITIZEN
+function registerCitizen(){
+let username=document.getElementById("cUsername").value;
+let password=document.getElementById("cPassword").value;
+let name=document.getElementById("cName").value;
+let addr=document.getElementById("cAddr").value;
+let gender=document.getElementById("cGender").value;
+if(!username||!password||!name||!addr) return alert("Fill all fields");
+let list=getData();
+if(list.find(x=>x.username===username)) return alert("Username taken");
+let nin="SL"+Date.now();
+let citizen={nin,name,address:addr,gender,username,password,photo:"",signature:"",balance:0};
+list.push(citizen);
+setData(list);
+alert("Registered! Your NIN: "+nin);
+showCitizenPanel(citizen);
+}
+
+// LOGIN
+function loginUser(){
+let u=document.getElementById("user").value;
+let p=document.getElementById("pass").value;
+let list=getData();
+let citizen=list.find(x=>x.username===u && x.password===p);
+if(users[u]===p){
+login.style.display="none";
+if(u==="Admin") {login.style.display="none";adminPanel.style.display="block";loadAdminTable();}
+if(u==="Orange") {login.style.display="none";orangePanel.style.display="block";}
+if(u==="UBA") {login.style.display="none";ubaPanel.style.display="block";}
+}else if(citizen){
+login.style.display="none";
+showCitizenPanel(citizen);
+}else alert("Invalid login");
+}
+
+// SHOW CITIZEN PANEL
+function showCitizenPanel(citizen){
+citizenPanel.style.display="block";
+updateCitizenInfo(citizen);
+showCard(citizen);
+}
+
+// UPDATE DASHBOARD INFO
+function updateCitizenInfo(c){
+citizenInfo.innerHTML=`<b>Welcome ${c.name}</b><br>NIN: ${c.nin}<br>Gender: ${c.gender}<br>Address: ${c.address}<br>
+<img src="${c.photo}" width=100><br>
+Signature: ${c.signature? '<img src="'+c.signature+'" width=120">':'Not signed'}<br>Balance: Le ${c.balance||0}`;
+}
+
+// CAMERA
+let cameraStarted=false;
+function startCamera(){
+if(cameraStarted) return;
+navigator.mediaDevices.getUserMedia({video:true})
+.then(s=>{cVideo.srcObject=s;cVideo.style.display="block";cameraStarted=true})
+.catch(e=>alert("Camera not available"));
+}
+function cSnap(){
+if(!cameraStarted) return alert("Start camera first");
+let c=document.createElement("canvas");
+c.width=260;c.height=200;
+c.getContext("2d").drawImage(cVideo,0,0,260,200);
+cPhoto.src=c.toDataURL();
+}
+
+// SIGNATURE
+let ctx=document.getElementById("cSign").getContext("2d");
+let drawing=false;
+cSign.onmousedown=()=>drawing=true;
+cSign.onmouseup=()=>drawing=false;
+cSign.onmousemove=e=>{if(drawing){ctx.lineTo(e.offsetX,e.offsetY);ctx.stroke()}};
+function clearSign(){ctx.clearRect(0,0,260,80)}
+
+// SAVE PHOTO & SIGN
+function savePhotoSign(){
+let list=getData();
+let u=document.getElementById("user").value;
+let c=list.find(x=>x.username===u);
+if(!c) c=list[list.length-1];
+if(cPhoto.src) c.photo=cPhoto.src;
+let sigData=cSign.toDataURL();
+if(sigData) c.signature=sigData;
+setData(list);
+updateCitizenInfo(c);
+showCard(c);
+alert("Photo & signature saved!");
+}
+
+// SHOW ID CARD
+function showCard(u){
+cardArea.innerHTML=`
+<div class="card">
+<div class="left"><img src="${u.photo?u.photo:'https://via.placeholder.com/100'}"></div>
+<div class="right">
+<div class="flag"></div>
+<b>Sierra Leone National ID</b><br>
+Name: ${u.name}<br>
+NIN: ${u.nin}<br>
+Gender: ${u.gender}<br>
+Address: ${u.address}<br>Username: ${u.username}
+</div></div>`;
+}
+
+// LOGOUT
+function logout(){location.reload();}
+
+// ADMIN PANEL
+function loadAdminTable(){
+let list=getData();
+let table=document.getElementById("adminTable");
+table.innerHTML=`<tr>
+<th>NIN</th><th>Name</th><th>Username</th><th>Gender</th><th>Photo</th><th>Signature</th><th>Actions</th>
+</tr>`;
+list.forEach((c,i)=>{
+table.innerHTML+=`<tr>
+<td>${c.nin}</td>
+<td>${c.name}</td>
+<td>${c.username}</td>
+<td>${c.gender}</td>
+<td><img src="${c.photo?c.photo:'https://via.placeholder.com/60'}" width="60"></td>
+<td>${c.signature?'<img src="'+c.signature+'" width="80">':'Not signed'}</td>
+<td>
+<button onclick="viewCard('${c.nin}')" class="blue">View ID</button>
+<button onclick="deleteCitizen(${i})" class="red">Delete</button>
+</td>
+</tr>`;
+});
+}
+function searchAdminCitizen(){
+let term=document.getElementById("searchInput").value;
+let list=getData();
+let f=list.find(x=>x.nin===term || x.username===term);
+if(!f) return alert("Citizen not found");
+document.getElementById("searchResultAdmin").innerHTML=`
+Name: ${f.name}<br>
+Username: ${f.username}<br>
+NIN: ${f.nin}<br>
+Gender: ${f.gender}<br>
+<img src="${f.photo?f.photo:'https://via.placeholder.com/100'}" width=100><br>
+Signature: ${f.signature?'<img src="'+f.signature+'" width="120">':'Not signed'}
+`;
+}
+function viewCard(nin){
+let list=getData();
+let c=list.find(x=>x.nin===nin);
+if(!c)return;
+showCard(c);
+}
+function deleteCitizen(index){
+if(!confirm("Delete this citizen?")) return;
+let list=getData();
+list.splice(index,1);
+setData(list);
+loadAdminTable();
+alert("Citizen deleted.");
+}
+
+// ORANGE
+function verifyOrange(){
+let list=getData();
+let f=list.find(x=>x.nin===onNin.value);
+if(!f) return alert("Invalid NIN");
+if(!onPhone.value.startsWith("07")) return alert("Invalid Orange Number");
+orangeResult.innerHTML=`Verified: ${f.name}<br><img src="${f.photo?f.photo:'https://via.placeholder.com/100'}" width=100>`;
+}
+
+// BANK
+function bankSystem(){
+let list=getData();
+let f=list.find(x=>x.nin===bnin.value);
+if(!f) return alert("Invalid NIN");
+f.balance=(f.balance||0)+parseInt(deposit.value||0);
+setData(list);
+updateCitizenInfo(f);
+bankResult.innerHTML=`Name: ${f.name}<br>Balance: Le ${f.balance}`;
+}
+</script>
+
+
+</body></html>
